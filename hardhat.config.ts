@@ -4,7 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 require("dotenv").config()
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.19",
+  solidity: "0.8.20",
 };
 
 module.exports = {
@@ -21,7 +21,7 @@ module.exports = {
     }
   },
   solidity: {
-    version: "0.8.9",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
