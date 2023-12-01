@@ -7,8 +7,16 @@ async function main() {
   const token = await Token.deploy("10000000000000000000000"); // 10,000 tokens
 
 
+  const MyCrowdsale = await ethers.getContractFactory("MyCrowdsale");
+  const myCrowdsale = await MyCrowdsale.deploy(token.getAddress());
+
+  await token.transfer(myCrowdsale.getAddress(), "10000000000000000000000");
+
   console.log(
     `deployed to ${token.target}`
+  );
+  console.log(
+      `deployed crowdsale to ${myCrowdsale.target}`
   );
 }
 
