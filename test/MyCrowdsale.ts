@@ -9,22 +9,21 @@ describe("MyCrowdsale Contract", function () {
     let token: IERC20;
     let owner: Signer;
     let addr1: Signer;
-    let addr2: Signer;
-    const goal = ethers.parseEther("100"); // Exemple de goal
+    const goal = ethers.parseEther("200");
 
     beforeEach(async function () {
-        [owner, addr1, addr2] = await ethers.getSigners();
+        [owner, addr1] = await ethers.getSigners();
 
         // Deploy the ERC20 Token contract
         const Token = await ethers.getContractFactory("Bite");
-        token = (await Token.deploy("10000000000000000000000000")) as IERC20; // 1,000 tokens
+        token = (await Token.deploy("10000000000000000000000000")) as IERC20;
 
         // Deploy the MyCrowdsale contract
         const CrowdsaleContract = await ethers.getContractFactory("MyCrowdsale");
-        crowdsale = (await CrowdsaleContract.deploy(token.getAddress(), 3600, ethers.parseEther("100"))) as MyCrowdsale;
+        crowdsale = (await CrowdsaleContract.deploy(token.getAddress(), 3600, goal)) as MyCrowdsale;
 
         // Transfer some tokens to the MyCrowdsale contract
-        await token.transfer(crowdsale.getAddress(), ethers.parseEther("100")); // 500 tokens
+        await token.transfer(crowdsale.getAddress(), ethers.parseEther("100"));
     });
 
     describe("Deployment", function () {
@@ -41,11 +40,11 @@ describe("MyCrowdsale Contract", function () {
     describe("Contributions", function () {
         it("Should accept contributions", async function () {
             // give contributor 10 ether
-            const initialTransferAmount = ethers.parseUnits("1", "ether");
+            const initialTransferAmount = ethers.parseEther("10");
             await token.transfer(await addr1.getAddress(), initialTransferAmount);
 
             // approve the transaction of 1 ether
-            const contributionAmount = ethers.parseUnits("1", "ether");
+            const contributionAmount = ethers.parseEther("1");
             await token.connect(addr1).approve(crowdsale.getAddress(), contributionAmount);
 
             //contribute for 1 ether
@@ -57,20 +56,17 @@ describe("MyCrowdsale Contract", function () {
 
     describe("withdraw", function () {
         it("Should allow only owner to withdraw after end and if goal is reached", async function () {
-            // Avancer le temps pour que la campagne soit terminée
+            // go to end of campaign
+            await token.transfer(crowdsale.getAddress(), ethers.parseEther("100"));
             await ethers.provider.send("evm_increaseTime", [3600]); // Augmente de 1 heure, ajustez selon votre besoin
             await ethers.provider.send("evm_mine", []);
 
-            // Simuler l'atteinte de l'objectif
-            // Note : Cela dépend de la logique de votre contrat, par exemple en faisant des contributions
-            // ...
-
-            // Tentative de retrait par le propriétaire
+            // owner withdraws
             await expect(crowdsale.connect(owner).withdraw())
                 .to.emit(token, "Transfer") // Vérifiez que l'événement Transfer est émis
                 .withArgs(await crowdsale.getAddress(), await owner.getAddress(), goal);
 
-            // Vérifiez que le solde du contrat Crowdsale est maintenant 0
+            // exepect campaign balance to be 0
             expect(await token.balanceOf(await crowdsale.getAddress())).to.equal(0);
         });
 
@@ -79,30 +75,29 @@ describe("MyCrowdsale Contract", function () {
         });
 
         it("Should fail if crowdsale is not ended", async function () {
-            // Supposons que la campagne n'est pas encore terminée
-            // ...
-
             await expect(crowdsale.connect(owner).withdraw()).to.be.revertedWith("Crowdsale not ended");
         });
     });
 
     describe("withdrawUnsoldTokens", function () {
         it("Should allow only owner to withdraw unsold tokens after end", async function () {
-            // Avancer le temps pour que la campagne soit terminée
+
+            // go to end of campaign
             await ethers.provider.send("evm_increaseTime", [3600]);
             await ethers.provider.send("evm_mine", []);
 
             const initialOwnerBalance = await token.balanceOf(await owner.getAddress());
 
-            // Retirer les tokens invendus
+            // Withdraw unsold tokens
             await expect(crowdsale.connect(owner).withdrawUnsoldTokens())
                 .to.emit(token, "Transfer");
 
             const finalOwnerBalance = await token.balanceOf(await owner.getAddress());
             const crowdsaleBalance = await token.balanceOf(await crowdsale.getAddress());
 
+            // exepect balance to be 0 and owner to have unsold tokens
             expect(crowdsaleBalance).to.equal(0);
-            expect(finalOwnerBalance - initialOwnerBalance).to.equal(ethers.parseUnits("100", "ether"));
+            expect(finalOwnerBalance - initialOwnerBalance).to.equal(ethers.parseEther("100"));
 
         });
 
@@ -112,6 +107,50 @@ describe("MyCrowdsale Contract", function () {
 
         it("Should revert if trying to withdraw unsold tokens before end", async function () {
             await expect(crowdsale.connect(owner).withdrawUnsoldTokens()).to.be.revertedWith("Crowdsale not yet finished");
+        });
+    });
+
+    describe("refund", function () {
+        it("Should allow contributors to refund if goal is not reached", async function () {
+
+            // give contributor 10 ether
+            const initialTransferAmount = ethers.parseEther("1");
+            await token.transfer(await addr1.getAddress(), initialTransferAmount);
+
+            // Contribute to campaign
+            const contributionAmount = ethers.parseEther("1");
+            await token.connect(addr1).approve(await crowdsale.getAddress(), contributionAmount);
+            await crowdsale.connect(addr1).contribute(contributionAmount);
+
+            // go to end of campaign
+            await ethers.provider.send("evm_increaseTime", [3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            // refund
+            const initialContributorBalance = await token.balanceOf(await addr1.getAddress());
+            await crowdsale.connect(addr1).refund();
+
+            const finalContributorBalance = await token.balanceOf(await addr1.getAddress());
+
+            // expect contributor to be refunded if goal is not reached
+            expect(finalContributorBalance).to.equal(initialContributorBalance + contributionAmount);
+        });
+
+        it("Should fail to refund if goal is reached", async function () {
+            // reach goal
+            await token.transfer(crowdsale.getAddress(), ethers.parseEther("100"));
+
+            // go to end of campaign
+            await ethers.provider.send("evm_increaseTime", [3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            // expect to fail refund because goal is reached
+            await expect(crowdsale.connect(addr1).refund()).to.be.revertedWith("Goal reached");
+        });
+
+        it("Should fail to refund if crowdfunding is not ended", async function () {
+            // expect to fail refund because campaign is not ended
+            await expect(crowdsale.connect(addr1).refund()).to.be.revertedWith("Crowdfunding not ended");
         });
     });
 });
