@@ -6,6 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Bite is ERC20 {
     constructor(uint256 initialSupply) ERC20("Bite", "BITE") {
-        _mint(msg.sender, initialSupply);
+        _mint(msg.sender, initialSupply * 10 ** decimals());
     }
 }
