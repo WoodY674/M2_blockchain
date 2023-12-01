@@ -8,7 +8,7 @@ async function main() {
 
 
   const MyCrowdsale = await ethers.getContractFactory("MyCrowdsale");
-  const myCrowdsale = await MyCrowdsale.deploy(token.getAddress());
+  const myCrowdsale = await MyCrowdsale.deploy(token.getAddress(), 3600, ethers.parseEther("100"));
 
   await token.transfer(myCrowdsale.getAddress(), "10000000000000000000000");
 
