@@ -47,10 +47,24 @@ describe("Token Bite", function () {
             const [from, to] = await ethers.getSigners()
             await expect(token.transfer(to.address, amount)).to.changeTokenBalances(token,
                 [from, to],
-                //[amount.mul(-1), amount]
                 [amount * BigInt(-1), amount]
             )
         })
+        it("should revert transfer exceeding available amount", async function () {
+            const [from, to] = await ethers.getSigners()
+            const amountOver = ethers.parseEther((tokenAmount*2).toString())
+            await expect(token.transfer(to.address, amountOver)).to.reverted
+        })
+        it("should revert after second transfer exceeding available amount", async function () {
+            const [from, to] = await ethers.getSigners()
+            const amountOver = ethers.parseEther((tokenAmount*.75).toString())
+            await expect(token.transfer(to.address, amountOver)).to.changeTokenBalances(token,
+                [from, to],
+                [amountOver * BigInt(-1), amountOver]
+            )
+            await expect(token.transfer(to.address, amountOver)).to.reverted
+        })
+
         it("should transfer amount from a specific account", async function () {
             const [deployer, account0, account1] = await ethers.getSigners()
             // first we will transfer 100 to account0 (from the deployer)
@@ -66,6 +80,21 @@ describe("Token Bite", function () {
                 //[0, amount.mul(-1), amount]
                 [0, amount * BigInt(-1), amount]
             )
+        })
+        it("should fail transfer because account doesn't approve deployer", async function () {
+            const [deployer, account0, account1] = await ethers.getSigners()
+
+            // provide enough token for all account to do transfert
+            await token.transfer(account0.address, amount)
+            await token.transfer(account1.address, amount)
+
+            // only account0 approve deployer for transfert
+            await token.connect(account0).approve(deployer.address, amount)
+
+            //account1 doesn't approve deployer for transfert, so should fail
+            await expect(token.transferFrom(account1.address, account0.address, amount)).to.reverted
+            expect(await token.balanceOf(account0.address)).to.eq(amount)
+            expect(await token.balanceOf(account1.address)).to.eq(amount)
         })
     })
 
