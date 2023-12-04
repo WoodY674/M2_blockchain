@@ -11,13 +11,18 @@ contract MyCrowdsale is Ownable{
     uint256 public goal;
     mapping(address => uint256) public contributions;
 
+    uint256 public releaseTime;
+
 
     event ContributionReceived(address contributor, uint256 amount);
+
+    event TokensWithdrawn(address contributor, uint256 amount);
 
     constructor(address _token, uint256 _duration, uint256 _goal) Ownable(msg.sender){
         token = IERC20(_token);
         end = block.timestamp + _duration;
         goal = _goal;
+        releaseTime = block.timestamp + _duration * 2;
     }
 
     function contribute(uint256 amount) external payable {
@@ -48,6 +53,16 @@ contract MyCrowdsale is Ownable{
         uint256 amount = contributions[msg.sender];
         contributions[msg.sender] = 0;
         token.transfer(msg.sender, amount);
+    }
+
+    function withdrawTokens() public {
+        require(block.timestamp >= releaseTime, "Tokens are still locked");
+        uint256 amount = contributions[msg.sender];
+        require(amount > 0, "No tokens to withdraw");
+
+        contributions[msg.sender] = 0;
+        token.transfer(msg.sender, amount);
+        emit TokensWithdrawn(msg.sender, amount);
     }
 
 }
