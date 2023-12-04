@@ -12,8 +12,6 @@ npx hardhat node
 npx hardhat run scripts/deploy.ts
 ```
 
-// TODO : clean project
-
 command to deploy: 
 ```shell
 npx hardhat run scripts/deploy.ts --network mumbai
