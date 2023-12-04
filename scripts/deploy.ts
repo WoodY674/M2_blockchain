@@ -31,7 +31,7 @@ async function main() {
   );
 
   // Wait for 5 confirmations before verifying crowdsale on PolygonScan
-  await myCrowdsale.deploymentTransaction()?.wait(5)
+  await myCrowdsale.deploymentTransaction()?.wait(10)
   await verifyContract(await myCrowdsale.getAddress(),[await token.getAddress(), duration, goal])
 
 }
