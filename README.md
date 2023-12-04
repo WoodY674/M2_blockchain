@@ -12,4 +12,9 @@ npx hardhat node
 npx hardhat run scripts/deploy.ts
 ```
 
-clean project
+// TODO : clean project
+
+command to deploy: 
+```shell
+npx hardhat run scripts/deploy.ts --network mumbai
+```
