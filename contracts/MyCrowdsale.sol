@@ -25,12 +25,11 @@ contract MyCrowdsale is Ownable{
         releaseTime = block.timestamp + _duration * 2;
     }
 
-    function contribute(uint256 amount) external payable {
+    function contribute() external payable {
         require(block.timestamp < end, "Crowdfunding has ended");
-        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
-        contributions[msg.sender] += amount;
-        emit ContributionReceived(msg.sender, amount);
+        contributions[msg.sender] += msg.value;
+        emit ContributionReceived(msg.sender, msg.value);
     }
 
     function withdraw() public onlyOwner {

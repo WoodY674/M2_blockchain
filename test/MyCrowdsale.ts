@@ -10,13 +10,14 @@ describe("MyCrowdsale Contract", function () {
     let owner: Signer;
     let contributor: Signer;
     const goal = ethers.parseEther("200");
+    const initialSupply = ethers.parseEther("100")
 
     beforeEach(async function () {
         [owner, contributor] = await ethers.getSigners();
 
         // Deploy the ERC20 Token contract
         const Token = await ethers.getContractFactory("Bite");
-        token = (await Token.deploy("10000000000000000000000000")) as IERC20;
+        token = (await Token.deploy(initialSupply)) as IERC20;
 
         // Deploy the MyCrowdsale contract
         const CrowdsaleContract = await ethers.getContractFactory("MyCrowdsale");
@@ -30,7 +31,7 @@ describe("MyCrowdsale Contract", function () {
         await token.transfer(await contributor.getAddress(), initialTransferAmount);
 
         // approve the transaction of 1 ether
-        const contributionAmount = ethers.parseEther("1");
+        const contributionAmount = ethers.parseEther("0.000000000000000001");
         await token.connect(contributor).approve(crowdsale.getAddress(), contributionAmount);
 
     });
@@ -49,10 +50,10 @@ describe("MyCrowdsale Contract", function () {
     describe("Contributions", function () {
         it("Should accept contributions", async function () {
 
-            const contributionAmount = ethers.parseEther("1");
+            const contributionAmount = ethers.parseEther("0.000000000000000001");
 
             //contribute for 1 ether
-            await crowdsale.connect(contributor).contribute(contributionAmount);
+            await crowdsale.connect(contributor).contribute({value: contributionAmount});
             const contribution = await crowdsale.contributions(await contributor.getAddress());
             expect(contribution).to.equal(contributionAmount);
         });
@@ -118,8 +119,8 @@ describe("MyCrowdsale Contract", function () {
         it("Should allow contributors to refund if goal is not reached", async function () {
 
             // Contribute to campaign
-            const contributionAmount = ethers.parseEther("1");
-            await crowdsale.connect(contributor).contribute(contributionAmount);
+            const contributionAmount = ethers.parseEther("0.000000000000000001");
+            await crowdsale.connect(contributor).contribute({value: contributionAmount});
 
             // go to end of campaign
             await ethers.provider.send("evm_increaseTime", [3600]);
@@ -160,10 +161,10 @@ describe("MyCrowdsale Contract", function () {
         });
 
         it("Should allow to withdraw tokens after release time", async function () {
-            const contributionAmount = ethers.parseEther("1");
+            const contributionAmount = ethers.parseEther("0.000000000000000001");
 
             //contribute for 1 ether
-            await crowdsale.connect(contributor).contribute(contributionAmount);
+            await crowdsale.connect(contributor).contribute({value: contributionAmount});
 
             await ethers.provider.send("evm_increaseTime", [3600 * 3]);
             await ethers.provider.send("evm_mine", []);
@@ -172,5 +173,4 @@ describe("MyCrowdsale Contract", function () {
             await expect(() => crowdsale.connect(contributor).withdrawTokens()).to.changeTokenBalances(token, [crowdsale, contributor], [-contributionAmount, contributionAmount]);
         });
     });
-
 });

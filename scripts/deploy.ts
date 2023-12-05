@@ -4,7 +4,7 @@ import {verifyContract} from "./verify";
 
 async function main() {
 
-  const initialSupply = "10000000000000000000000";
+  const initialSupply = ethers.parseEther("100") //"10000000000000000000000";
 
   const Token = await ethers.getContractFactory("Bite");
   const token = await Token.deploy(initialSupply); // 10,000 tokens
@@ -18,8 +18,8 @@ async function main() {
   await verifyContract(await token.getAddress(),[initialSupply])
 
 
-  const duration = 3600;
-  const goal = ethers.parseEther('100');
+  const duration = 600;
+  const goal = ethers.parseEther('200');
 
   const MyCrowdsale = await ethers.getContractFactory("MyCrowdsale");
   const myCrowdsale = await MyCrowdsale.deploy(token.getAddress(), duration, goal);
